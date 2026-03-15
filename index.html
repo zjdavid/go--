@@ -435,28 +435,12 @@
             const x = MARGIN + col * CELL_SIZE;
             const y = MARGIN + row * CELL_SIZE;
             
+            // 纯色棋子
             ctx.beginPath();
             ctx.arc(x, y, PIECE_RADIUS, 0, Math.PI * 2);
-            
-            if (color === 'black') {
-                // 黑棋 - 渐变效果
-                const gradient = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, PIECE_RADIUS);
-                gradient.addColorStop(0, '#444');
-                gradient.addColorStop(1, '#111');
-                ctx.fillStyle = gradient;
-            } else {
-                // 白棋
-                const gradient = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, PIECE_RADIUS);
-                gradient.addColorStop(0, '#fff');
-                gradient.addColorStop(1, '#ddd');
-                ctx.fillStyle = gradient;
-            }
+            ctx.fillStyle = color === 'black' ? '#000' : '#fff';
             ctx.fill();
-            
-            // 棋子阴影
-            ctx.beginPath();
-            ctx.arc(x + 2, y + 2, PIECE_RADIUS, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        }
             ctx.fill();
         }
         
