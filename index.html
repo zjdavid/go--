@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>围棋对战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        
+        h1 {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+            font-weight: 500;
+        }
+        
+        .status {
+            color: #aaa;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            padding: 8px 20px;
+            background: #2a2a4a;
+            border-radius: 20px;
+        }
+        
+        .score-display {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .score-box {
+            background: #2a2a4a;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .score-box .label {
+            color: #888;
+            font-size: 0.85rem;
+        }
+        
+        .score-box .value {
+            color: #fff;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        
+        .score-box .territory {
+            color: #aaa;
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+        
+        .board {
+            background: #c9a86c;
+            padding: 4px;
+            border-radius: 2px;
+            width: 100%;
+            max-width: 98vw;
+        }
+        
+        canvas {
+            display: block;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            width: 100%;
+        }
+        
+        @media (max-width: 500px) {
+            h1 { font-size: 1.4rem; margin-bottom: 8px; }
+            .status { font-size: 0.9rem; padding: 6px 15px; margin-bottom: 8px; }
+            .score-display { gap: 10px; margin-bottom: 8px; }
+            .score-box { padding: 8px 12px; min-width: 90px; }
+            .score-box .value { font-size: 1.1rem; }
+            .controls { gap: 8px; margin-top: 10px; }
+            button { padding: 8px 16px; font-size: 0.85rem; }
+        }
+        
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-restart { background: #e74c3c; color: white; }
+        .btn-pass { background: #f39c12; color: white; }
+        .btn-count { background: #9b59b6; color: white; }
+        .btn-undo { background: #3498db; color: white; }
+        
+        button:active { opacity: 0.8; }
+        
+        .winner {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a2e;
+            color: #fff;
+            padding: 30px 40px;
+            border-radius: 15px;
+            font-size: 1.3rem;
+            text-align: center;
+            display: none;
+            border: 2px solid #444;
+            z-index: 100;
+        }
+        
+        .winner.show { display: block; }
+        
+        .winner-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .winner-buttons button {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+        
+        .rules-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .rules-modal.show { display: flex; }
+        
+        .rules-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            padding: 25px;
+            border-radius: 15px;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .rules-content h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+        
+        .rules-content p {
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .rules-content ul {
+            margin-left: 20px;
+        }
+        
+        .rules-content li {
+            margin: 6px 0;
+        }
+        
+        .btn-close {
+            display: block;
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            background: #4fc3f7;
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .pass-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            display: none;
+            z-index: 50;
+        }
+        
+        .pass-modal.show { display: block; }
+        
+        .count-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .count-modal.show { display: flex; }
+        
+        .count-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+        }
+        
+        .count-content h2 {
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+        
+        .count-result {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        
+        .count-result .side {
+            text-align: center;
+        }
+        
+        .count-result .side .stones {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .count-result .side .territory {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .count-result .side .total {
+            color: #4fc3f7;
+            font-size: 1.2rem;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 围棋对战</h1>
+    
+    <div class="score-display">
+        <div class="score-box">
+            <div class="label">⚫ 黑子</div>
+            <div class="value" id="blackStones">0</div>
+            <div class="territory" id="blackTerr">+ 0 空</div>
+        </div>
+        <div class="score-box">
+            <div class="label">⚪ 白子</div>
+            <div class="value" id="whiteStones">0</div>
+            <div class="territory" id="whiteTerr">+ 0 空</div>
+        </div>
+    </div>
+    
+    <div class="status" id="status">当前回合: ⚫ 黑方</div>
+    
+    <div class="board">
+        <canvas id="board" width="450" height="450"></canvas>
+    </div>
+    
+    <div class="controls">
+        <button class="btn-undo" onclick="undo()">↩ 悔棋</button>
+        <button class="btn-pass" onclick="pass()">📋 停一手</button>
+        <button class="btn-count" onclick="countTerritory()">📊 点目</button>
+        <button class="btn-rules" onclick="showRules()">❓ 规则</button>
+        <button class="btn-restart" onclick="restart()">🔄 重新开始</button>
+    </div>
+    
+    <!-- 规则弹窗 -->
+    <div class="rules-modal" id="rulesModal">
+        <div class="rules-content">
+            <h2>围棋规则</h2>
+            <p><strong>基本规则：</strong>黑白轮流落子，试图包围对方棋子。被完全包围的棋子将被提掉。</p>
+            
+            <p><strong>提子条件：</strong>棋子相邻的交叉点全部被对方占据时，该棋子被提掉。</p>
+            
+            <p><strong>打劫：</strong>禁止全局同形（不能立即提回对方刚提掉的子）。</p>
+            
+            <p><strong>点目：</strong>终局后计算实地，黑棋贴3又3/4子（7.5目）。</p>
+            
+            <ul>
+                <li>点击/触摸落子</li>
+                <li>停一手：放弃当前回合</li>
+                <li>点目：估算当前局面</li>
+            </ul>
+            
+            <button class="btn-close" onclick="hideRules()">我知道了</button>
+        </div>
+    </div>
+    
+    <!-- 停一手提示 -->
+    <div class="pass-modal" id="passModal">
+        <span id="passText"></span>
+    </div>
+    
+    <!-- 点目弹窗 -->
+    <div class="count-modal" id="countModal">
+        <div class="count-content">
+            <h2>形势判断</h2>
+            <div class="count-result">
+                <div class="side">
+                    <div class="label">⚫ 黑子</div>
+                    <div class="stones" id="countBlackStones">0</div>
+                    <div class="territory">+ <span id="countBlackTerr">0</span> 空</div>
+                    <div class="total">= <span id="countBlackTotal">0</span></div>
+                </div>
+                <div class="side">
+                    <div class="label">⚪ 白子</div>
+                    <div class="stones" id="countWhiteStones">0</div>
+                    <div class="territory">+ <span id="countWhiteTerr">0</span> 空</div>
+                    <div class="total">= <span id="countWhiteTotal">0</span></div>
+                </div>
+            </div>
+            <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px;">
+                (黑贴7.5目，+表示黑优)
+            </p>
+            <button class="btn-close" onclick="closeCount()">关闭</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('board');
+        const ctx = canvas.getContext('2d');
+        
+        const GRID_SIZE = 15;
+        const BOARD_SIZE = 450;
+        let CELL_SIZE, PIECE_RADIUS, MARGIN;
+        
+        function resizeCanvas() {
+            const screenWidth = window.innerWidth;
+            const maxSize = Math.min(screenWidth - 30, BOARD_SIZE);
+            canvas.width = maxSize;
+            canvas.height = maxSize;
+            CELL_SIZE = (maxSize - 20) / (GRID_SIZE - 1);
+            PIECE_RADIUS = CELL_SIZE * 0.42;
+            MARGIN = CELL_SIZE / 2;
+        }
+        
+        let board = [];
+        let capturedStones = { black: 0, white: 0 };
+        let currentPlayer = 'black';
+        let history = [];
+        let passCount = 0;
+        
+        // 初始化棋盘
+        function initBoard() {
+            board = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                board[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    board[i][j] = null;
+                }
+            }
+        }
+        
+        // 绘制棋盘
+        function drawBoard() {
+            ctx.fillStyle = '#deb887';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(MARGIN, MARGIN + i * CELL_SIZE);
+                ctx.lineTo(MARGIN + (GRID_SIZE - 1) * CELL_SIZE, MARGIN + i * CELL_SIZE);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(MARGIN + i * CELL_SIZE, MARGIN);
+                ctx.lineTo(MARGIN + i * CELL_SIZE, MARGIN + (GRID_SIZE - 1) * CELL_SIZE);
+                ctx.stroke();
+            }
+            
+            // 星位 (15路棋盘: 3,7,11)
+            const starPoints = [[3,3], [3,7], [3,11], [7,3], [7,7], [7,11], [11,3], [11,7], [11,11]];
+            ctx.fillStyle = '#000';
+            for (const [x, y] of starPoints) {
+                ctx.beginPath();
+                ctx.arc(MARGIN + x * CELL_SIZE, MARGIN + y * CELL_SIZE, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // 绘制棋子
+        function drawPiece(row, col, color) {
+            const x = MARGIN + col * CELL_SIZE;
+            const y = MARGIN + row * CELL_SIZE;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, PIECE_RADIUS, 0, Math.PI * 2);
+            
+            if (color === 'black') {
+                // 黑棋 - 渐变效果
+                const gradient = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, PIECE_RADIUS);
+                gradient.addColorStop(0, '#444');
+                gradient.addColorStop(1, '#111');
+                ctx.fillStyle = gradient;
+            } else {
+                // 白棋
+                const gradient = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, PIECE_RADIUS);
+                gradient.addColorStop(0, '#fff');
+                gradient.addColorStop(1, '#ddd');
+                ctx.fillStyle = gradient;
+            }
+            ctx.fill();
+            
+            // 棋子阴影
+            ctx.beginPath();
+            ctx.arc(x + 2, y + 2, PIECE_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fill();
+        }
+        
+        // 绘制整盘棋
+        function draw() {
+            drawBoard();
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (board[i][j]) {
+                        drawPiece(i, j, board[i][j]);
+                    }
+                }
+            }
+            updateScore();
+        }
+        
+        // 获取气的位置
+        function getLiberties(row, col, color, visited = new Set()) {
+            const key = `${row},${col}`;
+            if (visited.has(key)) return 0;
+            if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return 0;
+            if (board[row][col] === null) return 1;
+            if (board[row][col] !== color) return 0;
+            
+            visited.add(key);
+            let liberties = 0;
+            const directions = [[-1,0],[1,0],[0,-1],[0,1]];
+            for (const [dr, dc] of directions) {
+                liberties += getLiberties(row + dr, col + dc, color, visited);
+            }
+            return liberties;
+        }
+        
+        // 提子
+        function removeDeadStones(color) {
+            const toRemove = [];
+            const opponent = color === 'black' ? 'white' : 'black';
+            
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (board[i][j] === opponent) {
+                        const liberties = countLiberties(i, j);
+                        if (liberties === 0) {
+                            toRemove.push([i, j]);
+                        }
+                    }
+                }
+            }
+            
+            for (const [row, col] of toRemove) {
+                board[row][col] = null;
+                capturedStones[color]++;
+            }
+            
+            return toRemove.length;
+        }
+        
+        // 计算某位置的气
+        function countLiberties(row, col) {
+            const color = board[row][col];
+            if (!color) return 0;
+            
+            const visited = new Set();
+            let liberties = 0;
+            const queue = [[row, col]];
+            const group = [];
+            
+            while (queue.length > 0) {
+                const [r, c] = queue.shift();
+                const key = `${r},${c}`;
+                if (visited.has(key)) continue;
+                if (r < 0 || r >= GRID_SIZE || c < 0 || c >= GRID_SIZE) continue;
+                if (board[r][c] === null) liberties++;
+                else if (board[r][c] === color && !visited.has(key)) {
+                    visited.add(key);
+                    group.push([r, c]);
+                    queue.push([r-1, c], [r+1, c], [r, c-1], [r, c+1]);
+                }
+            }
+            
+            return liberties;
+        }
+        
+        // 检查是否打劫
+        function isKo(lastMove, captured) {
+            if (captured === 0) return false;
+            
+            // 简化：检查是否只提掉一子
+            const [row, col] = lastMove;
+            
+            // 临时存储上一手
+            const historyState = JSON.stringify(board);
+            
+            // 提子后的局面
+            removeDeadStones(currentPlayer);
+            const currentBoard = JSON.stringify(board);
+            
+            // 恢复
+            board = JSON.parse(historyState);
+            
+            // 检查是否回到上一手（简化判断）
+            return captured === 1 && history.length > 0;
+        }
+        
+        // 落子
+        function placePiece(row, col) {
+            if (board[row][col]) return false;
+            
+            const previousBoard = JSON.stringify(board);
+            board[row][col] = currentPlayer;
+            
+            // 提掉对方的死子
+            const opponent = currentPlayer === 'black' ? 'white' : 'black';
+            const captured = removeDeadStones(currentPlayer);
+            
+            // 检查自己是否没气（自杀）
+            const myLiberties = countLiberties(row, col);
+            
+            // 打劫检查（简化）
+            const isKoMove = (captured === 1 && myLiberties === 0);
+            
+            if (myLiberties === 0 && !isKoMove) {
+                // 自杀，不允许
+                board = JSON.parse(previousBoard);
+                return false;
+            }
+            
+            history.push({
+                row, col, 
+                player: currentPlayer,
+                captured: captured,
+                previousBoard: previousBoard
+            });
+            
+            passCount = 0;
+            
+            // 切换玩家
+            currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+            
+            draw();
+            updateStatus();
+            return true;
+        }
+        
+        // 停一手
+        function pass() {
+            passCount++;
+            history.push({ pass: true, player: currentPlayer });
+            
+            if (passCount >= 2) {
+                // 双方停一手，终局
+                countTerritory();
+            } else {
+                const modal = document.getElementById('passModal');
+                document.getElementById('passText').textContent = currentPlayer === 'black' ? '⚫ 黑方停一手' : '⚪ 白方停一手';
+                modal.classList.add('show');
+                setTimeout(() => modal.classList.remove('show'), 1500);
+                
+                currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+                updateStatus();
+            }
+        }
+        
+        // 点目
+        function countTerritory() {
+            const counts = calculateTerritory();
+            
+            document.getElementById('countBlackStones').textContent = capturedStones.white; // 黑提白子
+            document.getElementById('countWhiteStones').textContent = capturedStones.black; // 白提黑子
+            
+            document.getElementById('countBlackTerr').textContent = counts.black;
+            document.getElementById('countWhiteTerr').textContent = counts.white;
+            
+            // 贴目计算 (黑贴7.5目 = 3.75子)
+            const blackTotal = capturedStones.white + counts.black;
+            const whiteTotal = capturedStones.black + counts.white + 3.75;
+            
+            document.getElementById('countBlackTotal').textContent = blackTotal.toFixed(1);
+            document.getElementById('countWhiteTotal').textContent = whiteTotal.toFixed(1);
+            
+            let diff = blackTotal - whiteTotal;
+            let resultText = diff > 0 ? `黑胜${diff.toFixed(1)}目` : `白胜${(-diff).toFixed(1)}目`;
+            
+            // 添加到弹窗
+            const countContent = document.querySelector('.count-content');
+            let resultEl = countContent.querySelector('.result-text');
+            if (!resultEl) {
+                resultEl = document.createElement('p');
+                resultEl.className = 'result-text';
+                resultEl.style.cssText = 'font-size: 1.1rem; margin-top: 15px; padding: 10px; background: rgba(255,215,0,0.2); border-radius: 8px;';
+                countContent.insertBefore(resultEl, countContent.querySelector('.btn-close'));
+            }
+            resultEl.textContent = resultText;
+            
+            document.getElementById('countModal').classList.add('show');
+        }
+        
+        // 计算实地
+        function calculateTerritory() {
+            const visited = new Set();
+            let blackTerr = 0;
+            let whiteTerr = 0;
+            
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (board[i][j] === null && !visited.has(`${i},${j}`)) {
+                        const territory = floodFill(i, j, visited);
+                        if (territory.owner === 'black') blackTerr += territory.count;
+                        else if (territory.owner === 'white') whiteTerr += territory.count;
+                    }
+                }
+            }
+            
+            return { black: blackTerr, white: whiteTerr };
+        }
+        
+        // 洪水填充计算空地
+        function floodFill(startRow, startCol, visited) {
+            const queue = [[startRow, startCol]];
+            let blackBorder = 0;
+            let whiteBorder = 0;
+            let emptyCount = 0;
+            
+            while (queue.length > 0) {
+                const [row, col] = queue.shift();
+                const key = `${row},${col}`;
+                if (visited.has(key)) continue;
+                if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) continue;
+                
+                visited.add(key);
+                
+                if (board[row][col] === null) {
+                    emptyCount++;
+                    queue.push([row-1, col], [row+1, col], [row, col-1], [row, col+1]);
+                } else if (board[row][col] === 'black') {
+                    blackBorder++;
+                } else if (board[row][col] === 'white') {
+                    whiteBorder++;
+                }
+            }
+            
+            let owner = 'neutral';
+            if (blackBorder > 0 && whiteBorder === 0) owner = 'black';
+            else if (whiteBorder > 0 && blackBorder === 0) owner = 'white';
+            
+            return { owner, count: emptyCount };
+        }
+        
+        // 更新分数显示
+        function updateScore() {
+            const counts = calculateTerritory();
+            document.getElementById('blackStones').textContent = capturedStones.white;
+            document.getElementById('whiteStones').textContent = capturedStones.black;
+            document.getElementById('blackTerr').textContent = '+ ' + counts.black + ' 空';
+            document.getElementById('whiteTerr').textContent = '+ ' + counts.white + ' 空';
+        }
+        
+        // 更新状态
+        function updateStatus() {
+            document.getElementById('status').textContent = '当前回合: ' + (currentPlayer === 'black' ? '⚫ 黑方' : '⚪ 白方');
+        }
+        
+        // 悔棋
+        function undo() {
+            if (history.length === 0) return;
+            
+            const lastMove = history.pop();
+            if (lastMove.pass) {
+                passCount = Math.max(0, passCount - 1);
+                currentPlayer = lastMove.player;
+            } else {
+                // 恢复棋盘
+                board = JSON.parse(lastMove.previousBoard);
+                // 恢复提子数
+                if (lastMove.captured > 0) {
+                    const opponent = lastMove.player === 'black' ? 'white' : 'black';
+                    capturedStones[opponent] = Math.max(0, capturedStones[opponent] - lastMove.captured);
+                }
+                currentPlayer = lastMove.player;
+            }
+            
+            draw();
+            updateStatus();
+        }
+        
+        // 重新开始
+        function restart() {
+            initBoard();
+            currentPlayer = 'black';
+            capturedStones = { black: 0, white: 0 };
+            history = [];
+            passCount = 0;
+            draw();
+            updateStatus();
+            document.getElementById('countModal').classList.remove('show');
+        }
+        
+        // 显示/隐藏规则
+        function showRules() { document.getElementById('rulesModal').classList.add('show'); }
+        function hideRules() { document.getElementById('rulesModal').classList.remove('show'); }
+        function closeCount() { document.getElementById('countModal').classList.remove('show'); }
+        
+        // 点击事件
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            const col = Math.round((x - MARGIN) / CELL_SIZE);
+            const row = Math.round((y - MARGIN) / CELL_SIZE);
+            
+            if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+                placePiece(row, col);
+            }
+        });
+        
+        // 触摸事件
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (touch.clientX - rect.left) * scaleX;
+            const y = (touch.clientY - rect.top) * scaleY;
+            
+            const col = Math.round((x - MARGIN) / CELL_SIZE);
+            const row = Math.round((y - MARGIN) / CELL_SIZE);
+            
+            if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE) {
+                placePiece(row, col);
+            }
+        }, { passive: false });
+        
+        // 初始化
+        resizeCanvas();
+        initBoard();
+        draw();
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            draw();
+        });
+    </script>
+</body>
+</html>
